@@ -1,0 +1,6 @@
+{
+  "name": "FadChena",
+  "description": "Bangladesh-focused scam detection and digital safety app (ফাঁদচেনা) to analyze suspicious SMS, URLs, phone numbers, online shops, and job offers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

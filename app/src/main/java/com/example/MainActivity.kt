@@ -32,6 +32,7 @@ import com.example.fadchena.ui.screens.SettingsScreen
 import com.example.fadchena.ui.screens.ShopJobCheckerScreen
 import com.example.fadchena.ui.screens.SubmitReportScreen
 import com.example.fadchena.ui.screens.UrlCheckerScreen
+import com.example.fadchena.ui.screens.SignInScreen
 import com.example.ui.theme.FadChenaTheme
 import com.example.fadchena.ui.viewmodel.MainViewModel
 import com.example.fadchena.ui.viewmodel.Screen
@@ -53,11 +54,22 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun FadChenaApp(viewModel: MainViewModel) {
+    val currentUser by viewModel.currentUser.collectAsState()
+    val isGuestMode by viewModel.isGuestMode.collectAsState()
     val language by viewModel.language.collectAsState()
     val isDarkMode by viewModel.isDarkMode.collectAsState()
     val hasConsented by viewModel.hasConsented.collectAsState()
     val currentScreen by viewModel.currentScreen.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
+
+    if (currentUser == null && !isGuestMode) {
+        SignInScreen(
+            language = language,
+            onAuthSuccess = { user -> viewModel.onAuthSuccess(user) },
+            onContinueAsGuest = { viewModel.enableGuestMode() }
+        )
+        return
+    }
 
     val snackbarHostState = remember { SnackbarHostState() }
 

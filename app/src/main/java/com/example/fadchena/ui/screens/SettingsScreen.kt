@@ -19,14 +19,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.AlertDialog
@@ -40,6 +42,9 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -90,6 +96,117 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        // Firebase Cloud Account & Sync Status Card
+        item {
+            val context = LocalContext.current
+            val currentUser by viewModel.currentUser.collectAsState()
+
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = androidx.compose.foundation.BorderStroke(
+                    0.8.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("firebase_account_card")
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        if (currentUser != null) CyberTeal.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (currentUser != null) Icons.Default.CloudDone else Icons.Default.AccountCircle,
+                                    contentDescription = null,
+                                    tint = if (currentUser != null) CyberTeal else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = if (language == "BN") "ফায়ারবেস ক্লাউড অ্যাকাউন্ট" else "Firebase Cloud Account",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = if (currentUser != null) {
+                                        currentUser?.displayName ?: currentUser?.email ?: "Google Account Connected"
+                                    } else {
+                                        if (language == "BN") "অফলাইন গেস্ট মোড সক্রিয়" else "Offline Guest Mode Active"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (currentUser != null) CyberTeal else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+
+                    if (currentUser != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = if (language == "BN")
+                                "ক্লাউড সিংক সক্রিয়: আপনার স্ক্যান ইতিহাস ও রিপোর্টগুলো Firebase Firestore-এ ক্লাউডে ব্যাকআপ হচ্ছে।"
+                            else
+                                "Cloud sync active: Your fraud reports and scans are securely synchronized to Firebase Firestore.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.signOut(context) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("sign_out_button"),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Logout,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = if (language == "BN") "অ্যাকাউন্ট সাইন আউট" else "Sign Out")
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = if (language == "BN")
+                                "ক্লাউডে ডেটা সেভ রাখতে এবং কমিউনিটি রিপোর্ট জমা দিতে Google অ্যাকাউন্ট সংযুক্ত করুন।"
+                            else
+                                "Connect your Google account to enable Firestore Cloud sync and community fraud alerts.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { viewModel.enableGuestMode(); viewModel.signOut(context) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("settings_google_sign_in_button"),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(text = if (language == "BN") "Google দিয়ে সাইন ইন করুন" else "Sign in with Google")
+                        }
+                    }
+                }
+            }
         }
 
         // Language & Appearance Card

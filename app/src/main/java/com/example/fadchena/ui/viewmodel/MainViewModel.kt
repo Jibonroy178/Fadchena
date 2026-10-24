@@ -11,6 +11,10 @@ import com.example.fadchena.data.model.SafetyTip
 import com.example.fadchena.data.model.ScanType
 import com.example.fadchena.data.remote.GeminiService
 import com.example.fadchena.data.repository.SafetyRepository
+import com.example.fadchena.data.remote.firebase.AuthManager
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +39,13 @@ sealed class Screen {
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = SafetyRepository(application)
+
+    // Firebase Auth State
+    val currentUser: StateFlow<FirebaseUser?> = AuthManager.authStateFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), Firebase.auth.currentUser)
+
+    private val _isGuestMode = MutableStateFlow(false)
+    val isGuestMode: StateFlow<Boolean> = _isGuestMode.asStateFlow()
 
     // Language: "BN" or "EN"
     private val _language = MutableStateFlow("BN")
@@ -258,6 +269,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.clearScanHistory()
             _statusMessage.value = if (_language.value == "BN") "সকল পূর্ববর্তী রেকর্ড মুছে ফেলা হয়েছে" else "Scan history cleared"
+        }
+    }
+
+    fun enableGuestMode() {
+        _isGuestMode.value = true
+    }
+
+    fun onAuthSuccess(user: FirebaseUser) {
+        _isGuestMode.value = false
+        viewModelScope.launch {
+            try {
+                repository.firestoreRepo.syncUserProfile(
+                    userId = user.uid,
+                    displayName = user.displayName ?: "User",
+                    email = user.email ?: ""
+                )
+            } catch (_: Exception) {}
+        }
+        _statusMessage.value = if (_language.value == "BN") {
+            "Google অ্যাকাউন্ট সফলভাবে সংযুক্ত হয়েছে (${user.displayName ?: user.email ?: ""})"
+        } else {
+            "Connected as ${user.displayName ?: user.email ?: "Google User"}"
+        }
+    }
+
+    fun signOut(context: android.content.Context) {
+        val credentialManager = androidx.credentials.CredentialManager.create(context)
+        AuthManager.signOut(context, credentialManager, viewModelScope) {
+            _isGuestMode.value = false
+            _statusMessage.value = if (_language.value == "BN") "সাইন আউট সম্পন্ন হয়েছে" else "Signed out successfully"
         }
     }
 }

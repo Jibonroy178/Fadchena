@@ -14,6 +14,9 @@ import com.example.fadchena.data.model.SafetyTip
 import com.example.fadchena.data.model.ScanFinding
 import com.example.fadchena.data.model.ScanType
 import com.example.fadchena.data.remote.GeminiService
+import com.example.fadchena.data.remote.firebase.FirestoreSafetyRepository
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.json.JSONArray
@@ -23,6 +26,7 @@ class SafetyRepository(context: Context) {
     private val db = FadChenaDatabase.getInstance(context)
     private val scanDao = db.scanRecordDao()
     private val reportDao = db.communityReportDao()
+    val firestoreRepo: FirestoreSafetyRepository = FirestoreSafetyRepository(context)
 
     val recentScans: Flow<List<RiskAssessment>> = scanDao.getRecentScans().map { entities ->
         entities.map { it.toDomain() }
@@ -251,6 +255,21 @@ class SafetyRepository(context: Context) {
             moderatorNote = null
         )
         reportDao.insertReport(entity)
+
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser != null) {
+            try {
+                firestoreRepo.submitCommunityReport(
+                    userId = currentUser.uid,
+                    userDisplayName = currentUser.displayName ?: "Anonymous Citizen",
+                    target = target.trim(),
+                    category = category,
+                    description = description.trim(),
+                    lossAmountBdt = lossAmountBdt,
+                    evidenceNote = evidenceNote.trim()
+                )
+            } catch (_: Exception) {}
+        }
         return true
     }
 
@@ -305,6 +324,13 @@ class SafetyRepository(context: Context) {
             rawAnalysisSource = assessment.rawAnalysisSource
         )
         scanDao.insertScan(entity)
+
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser != null) {
+            try {
+                firestoreRepo.saveScan(currentUser.uid, assessment)
+            } catch (_: Exception) {}
+        }
     }
 
     // Official Emergency Hotlines & Contacts for Bangladesh

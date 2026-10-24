@@ -1,0 +1,193 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account profile and activity tracking",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user ID matching request.auth.uid"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of user creation"
+        },
+        "lastLoginAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last login"
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "email",
+        "createdAt",
+        "lastLoginAt"
+      ]
+    },
+    "ScanRecord": {
+      "title": "Scan Record",
+      "description": "A single fraud scan record performed by a user",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique scan ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of the user who performed the scan"
+        },
+        "scanType": {
+          "type": "string",
+          "enum": [
+            "SMS",
+            "URL",
+            "PHONE",
+            "JOB_OR_SHOP"
+          ],
+          "description": "Type of scam check"
+        },
+        "inputSummary": {
+          "type": "string",
+          "description": "Summary or snippet of the scanned content"
+        },
+        "riskLevel": {
+          "type": "string",
+          "enum": [
+            "HIGH_RISK",
+            "SUSPICIOUS",
+            "SAFE",
+            "LOWER_RISK_SIGNS",
+            "INSUFFICIENT_EVIDENCE"
+          ],
+          "description": "Risk assessment level"
+        },
+        "evidenceQuality": {
+          "type": "string",
+          "enum": [
+            "STRONG",
+            "MODERATE",
+            "WEAK"
+          ],
+          "description": "Confidence and evidence quality"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of scan creation"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "scanType",
+        "inputSummary",
+        "riskLevel",
+        "evidenceQuality",
+        "createdAt"
+      ]
+    },
+    "CommunityReport": {
+      "title": "Community Scam Report",
+      "description": "Public crowdsourced fraud report for alerting the community",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique report ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author user ID matching request.auth.uid"
+        },
+        "userDisplayName": {
+          "type": "string",
+          "description": "Display name of the reporter"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target phone number, URL, or identifier"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "SMS",
+            "URL",
+            "PHONE",
+            "JOB_OR_SHOP"
+          ],
+          "description": "Category of scam"
+        },
+        "description": {
+          "type": "string",
+          "description": "Details of the fraudulent incident"
+        },
+        "lossAmountBdt": {
+          "type": "number",
+          "description": "Reported financial loss in BDT"
+        },
+        "evidenceNote": {
+          "type": "string",
+          "description": "Notes or reference regarding evidence"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "PENDING",
+            "UNDER_REVIEW",
+            "VERIFIED",
+            "REJECTED",
+            "RESOLVED"
+          ],
+          "description": "Status of the community report"
+        },
+        "reportCount": {
+          "type": "integer",
+          "description": "Aggregated counter of similar reports"
+        },
+        "reportedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of report creation"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "userDisplayName",
+        "target",
+        "category",
+        "description",
+        "status",
+        "reportCount",
+        "reportedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles restricted to owning user"
+    },
+    "/users/{userId}/scans/{scanId}": {
+      "schema": "ScanRecord",
+      "description": "Personal scam check records per user"
+    },
+    "/community_reports/{reportId}": {
+      "schema": "CommunityReport",
+      "description": "Crowdsourced scam intelligence reports"
+    }
+  }
+}

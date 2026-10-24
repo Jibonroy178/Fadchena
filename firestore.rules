@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data, userId) {
+      return data.userId == userId &&
+        data.displayName is string &&
+        data.displayName.size() > 0 &&
+        data.displayName.size() <= 100 &&
+        data.email is string &&
+        data.email.size() > 3 &&
+        data.email.size() <= 150 &&
+        data.createdAt is timestamp &&
+        data.createdAt <= request.time &&
+        data.lastLoginAt is timestamp &&
+        data.lastLoginAt <= request.time;
+    }
+
+    function isValidScanRecord(data, userId) {
+      return data.id is string &&
+        data.id.size() > 0 &&
+        data.id.size() <= 100 &&
+        data.userId == userId &&
+        data.scanType in ['SMS', 'URL', 'PHONE', 'JOB_OR_SHOP'] &&
+        data.inputSummary is string &&
+        data.inputSummary.size() <= 2000 &&
+        data.riskLevel in ['HIGH_RISK', 'SUSPICIOUS', 'SAFE', 'LOWER_RISK_SIGNS', 'INSUFFICIENT_EVIDENCE'] &&
+        data.evidenceQuality in ['STRONG', 'MODERATE', 'WEAK'] &&
+        data.createdAt is timestamp &&
+        data.createdAt <= request.time;
+    }
+
+    function isValidCommunityReport(data) {
+      return data.id is string &&
+        data.id.size() > 0 &&
+        data.id.size() <= 100 &&
+        data.userId == request.auth.uid &&
+        data.userDisplayName is string &&
+        data.userDisplayName.size() > 0 &&
+        data.userDisplayName.size() <= 100 &&
+        data.target is string &&
+        data.target.size() > 0 &&
+        data.target.size() <= 500 &&
+        data.category in ['SMS', 'URL', 'PHONE', 'JOB_OR_SHOP'] &&
+        data.description is string &&
+        data.description.size() > 0 &&
+        data.description.size() <= 3000 &&
+        (!('lossAmountBdt' in data) || data.lossAmountBdt == null || data.lossAmountBdt is number) &&
+        (!('evidenceNote' in data) || data.evidenceNote == null || data.evidenceNote is string) &&
+        data.status in ['PENDING', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED', 'RESOLVED'] &&
+        data.reportCount is int &&
+        data.reportCount >= 1 &&
+        data.reportedAt is timestamp &&
+        data.reportedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data, userId) && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(userId);
+
+      match /scans/{scanId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidScanRecord(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidScanRecord(request.resource.data, userId) && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isOwner(userId);
+      }
+    }
+
+    match /community_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidCommunityReport(request.resource.data);
+      allow update: if isAuthenticated() &&
+        resource.data.userId == request.auth.uid &&
+        isValidCommunityReport(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.reportedAt == resource.data.reportedAt;
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+  }
+}
